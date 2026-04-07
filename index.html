@@ -238,21 +238,21 @@
   <div class="container">
     <div class="header">
       <h1>🎨 Ultra Smart Coloring Studio</h1>
-      <p>Safe fill coloring with upload, undo, erase, clear, save & mobile support</p>
+      <p>Auto-loads from GitHub • Safe fill coloring • Undo • Erase • Save</p>
     </div>
 
     <div class="upload-bar">
       <label class="file-wrap">
-        🖼️ Upload Outline
+        🖼️ Upload Outline (Optional)
         <input type="file" id="outlineUpload" accept="image/*" />
       </label>
 
       <label class="file-wrap">
-        🌈 Upload Reference
+        🌈 Upload Reference (Optional)
         <input type="file" id="referenceUpload" accept="image/*" />
       </label>
 
-      <button class="btn btn-reset" id="loadDemoBtn">🐵 Load Demo</button>
+      <button class="btn btn-reset" id="reloadBtn">🔄 Reload Default</button>
     </div>
 
     <div class="main-area">
@@ -285,7 +285,7 @@
       Click or tap inside white coloring areas only. The app protects black outlines and blocks most outside-color leaks.
     </div>
 
-    <div class="status" id="statusText">Loading...</div>
+    <div class="status" id="statusText">Loading images from GitHub...</div>
   </div>
 
   <script>
@@ -299,8 +299,9 @@
     ];
 
     const DEMO_SIZE = 700;
-    const DEFAULT_OUTLINE = "monkey-outline.png";
-    const DEFAULT_REFERENCE = "monkey-colored.png";
+    // AUTO-LOAD FROM GITHUB - Change these filenames to match your files
+    const DEFAULT_OUTLINE = "monkey-outline.jpg";
+    const DEFAULT_REFERENCE = "monkey-colored.jpg";
 
     let canvas, ctx;
     let selectedColor = colors[0];
@@ -318,7 +319,7 @@
 
       createPalette();
       bindEvents();
-      loadDemoAssets();
+      loadAutoImages(); // AUTO-LOAD ON START
     }
 
     function setStatus(msg) {
@@ -354,7 +355,7 @@
       document.getElementById("eraserBtn").addEventListener("click", selectEraser);
       document.getElementById("clearBtn").addEventListener("click", clearToOutline);
       document.getElementById("saveBtn").addEventListener("click", savePNG);
-      document.getElementById("loadDemoBtn").addEventListener("click", loadDemoAssets);
+      document.getElementById("reloadBtn").addEventListener("click", loadAutoImages);
 
       document.getElementById("outlineUpload").addEventListener("change", handleOutlineUpload);
       document.getElementById("referenceUpload").addEventListener("change", handleReferenceUpload);
@@ -392,7 +393,7 @@
         const img = new Image();
         img.onload = () => {
           currentOutlineImage = img;
-          saveUndoSnapshot(); // save current before replacing
+          saveUndoSnapshot();
           drawOutlineToCanvas(img);
           setStatus("Custom outline loaded successfully 🎉");
         };
@@ -413,40 +414,43 @@
       reader.readAsDataURL(file);
     }
 
-    function loadDemoAssets() {
+    // AUTO-LOAD IMAGES FROM GITHUB/RENDER
+    function loadAutoImages() {
+      setStatus("Loading images from GitHub...");
       undoStack = [];
-      loadReferenceImage(DEFAULT_REFERENCE, true);
-      loadOutlineImage(DEFAULT_OUTLINE, true);
+      loadReferenceImage(DEFAULT_REFERENCE);
+      loadOutlineImage(DEFAULT_OUTLINE);
     }
 
-    function loadReferenceImage(src, isDemo = false) {
+    function loadReferenceImage(src) {
       const img = document.getElementById("referencePhoto");
       img.onload = () => {
-        if (isDemo) setStatus("Demo reference loaded 🎨");
+        setStatus("✅ Reference loaded. Start coloring! 🎨");
       };
       img.onerror = () => {
         img.removeAttribute("src");
-        img.alt = "Reference image not found";
+        img.alt = "Reference not found - upload manually";
+        setStatus("⚠️ Reference image not found. Upload manually if needed.");
       };
-      img.src = src + "?v=" + Date.now();
+      // Add cache-busting timestamp
+      img.src = src + "?t=" + Date.now();
     }
 
-    function loadOutlineImage(src, isDemo = false) {
+    function loadOutlineImage(src) {
       const img = new Image();
       img.onload = () => {
         currentOutlineImage = img;
         drawOutlineToCanvas(img);
-        if (isDemo) setStatus("Demo outline loaded. Start coloring! 🐵");
       };
       img.onerror = () => {
         drawFallbackDemo();
-        setStatus("Demo outline not found. Loaded fallback drawing instead.");
+        setStatus("⚠️ Outline not found. Using fallback drawing.");
       };
-      img.src = src + "?v=" + Date.now();
+      // Add cache-busting timestamp
+      img.src = src + "?t=" + Date.now();
     }
 
     function drawOutlineToCanvas(img) {
-      // Keep fixed canvas size for stable flood fill
       canvas.width = DEMO_SIZE;
       canvas.height = DEMO_SIZE;
 
@@ -454,12 +458,10 @@
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Fit image inside canvas preserving aspect ratio
       const fit = getContainFit(img.width, img.height, canvas.width, canvas.height);
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(img, fit.x, fit.y, fit.width, fit.height);
 
-      // Save base state as first undo baseline
       saveBaseState();
     }
 
@@ -485,12 +487,10 @@
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
 
-      // Head
       ctx.beginPath();
       ctx.arc(350, 310, 170, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Ears
       ctx.beginPath();
       ctx.arc(180, 180, 75, 0, Math.PI * 2);
       ctx.stroke();
@@ -499,12 +499,10 @@
       ctx.arc(520, 180, 75, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Face inner
       ctx.beginPath();
       ctx.arc(350, 380, 110, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Eyes
       ctx.beginPath();
       ctx.arc(300, 300, 14, 0, Math.PI * 2);
       ctx.fill();
@@ -513,17 +511,14 @@
       ctx.arc(400, 300, 14, 0, Math.PI * 2);
       ctx.fill();
 
-      // Nose
       ctx.beginPath();
       ctx.arc(350, 360, 16, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Smile
       ctx.beginPath();
       ctx.arc(350, 405, 45, 0, Math.PI);
       ctx.stroke();
 
-      // Reference placeholder
       const ref = document.getElementById("referencePhoto");
       ref.removeAttribute("src");
       ref.alt = "Upload reference image";
@@ -554,10 +549,7 @@
         return;
       }
 
-      // Remove current state
       undoStack.pop();
-
-      // Restore previous state
       const prev = undoStack[undoStack.length - 1];
       ctx.putImageData(prev, 0, 0);
       setStatus("Undo successful ↩️");
@@ -608,7 +600,6 @@
       const max = Math.max(r, g, b);
       const min = Math.min(r, g, b);
 
-      // Strong black/gray outlines and anti-aliased edges
       if (avg < 180 && (max - min) < 95) return true;
 
       return false;
@@ -617,12 +608,10 @@
     function isFillablePixel(r, g, b, a) {
       if (a < 15) return false;
 
-      // Only fill very light / white-ish areas
       const avg = (r + g + b) / 3;
       const max = Math.max(r, g, b);
       const min = Math.min(r, g, b);
 
-      // White or near-white zones only
       if (avg > 215 && (max - min) < 80) return true;
 
       return false;
@@ -664,7 +653,6 @@
         return;
       }
 
-      // Save current state BEFORE applying fill
       saveUndoSnapshot();
 
       const visited = new Uint8Array(width * height);
@@ -715,7 +703,6 @@
 
       ctx.putImageData(imageData, 0, 0);
 
-      // Replace last undo snapshot with final post-fill state too, so undo chain stays stable
       try {
         const finalState = ctx.getImageData(0, 0, width, height);
         undoStack.push(finalState);
