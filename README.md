@@ -1,1 +1,1 @@
-https://monkey-coloring.onrender.com
+https://image-colouring-v1.onrender.com/
